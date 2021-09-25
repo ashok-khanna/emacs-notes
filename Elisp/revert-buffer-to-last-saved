@@ -1,0 +1,1 @@
+ (global-set-key (kbd "C-c u") '(lambda () (interactive) (revert-buffer t (not (buffer-modified-p)) t)))
