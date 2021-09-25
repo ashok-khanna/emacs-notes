@@ -18,3 +18,6 @@
     (local-set-key (format "%s" index) #'(lambda ()
 					   (interactive)
 					   (switch-to-buffer (nth 0 buffer-list))))))
+
+
+(global-set-key (kbd "C-c b") 'top-10-buffers)
