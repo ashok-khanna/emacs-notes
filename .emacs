@@ -394,7 +394,7 @@
 (require 'erc)
 (require 'tls)
 (defun start-erc () "Connect to IRC." (interactive)
-       (erc-tls :server "irc.libera.chat" :port 6697 :nick "Michal" :full-name "Your Name"))
+       (erc-tls :server "irc.libera.chat" :port 6697 :nick "lisp123" :full-name "Your Name"))
 (setq  erc-hide-list '("JOIN" "PART" "QUIT"))
 
 (global-set-key (kbd "C-c e") '(lambda () (interactive) (start-erc)))
