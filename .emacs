@@ -1,5 +1,5 @@
 ;;;; Emacs Settings of Ashok Khanna
-;;;; Last updated 25 September 2021
+;;;; Last updated 2 October 2021
 
 ;;; 1.0 Basic Settings
 
@@ -14,6 +14,10 @@
 
 (require 'package)                             ;; Loads package.el (¯\_(ツ)_/¯)
 (package-initialize)                           ;; Load Emacs Lisp packages, and activate them. The variable ‘package-load-list’ controls which packages to load.
+
+;; Winner Mode to all undo/redo of Window Configurations
+
+(winner-mode 1)                               ;; C-c <- to undo and C-c -> to re-do
 
 ;; Helps with issues with Melpa on Mac, can also try http://www.mirrorservice.org/sites/stable.melpa.org/packages/
 
@@ -53,6 +57,18 @@
 (blink-cursor-mode 0)                              ;; Turn off blinking on cursor
 (toggle-scroll-bar -1)                             ;; Turn off scroll bars
 (setq column-number-mode t)                        ;; Shows column number in buffer
+(set-face-background 'mode-line "purple1")         ;; Changes color of active buffer's mode-line (to change color of inactive buffer mode-line-inactive
+
+;; Remove Minor modes from Mode Line
+;; Source: https://emacs.stackexchange.com/questions/3925/hide-list-of-minor-modes-in-mode-line
+(setq mode-line-modes
+      (mapcar (lambda (elem)
+                (pcase elem
+                  (`(:propertize (,_ minor-mode-alist . ,_) . ,_)
+                   "")
+                  (t elem)))
+              mode-line-modes))
+
 
 ;;; Not Used
 
@@ -67,10 +83,12 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-faces-vector
+   [default default default italic underline success warning error])
  '(blink-cursor-mode nil)
  '(column-number-mode t)
  '(completion-auto-help 'lazy)
- '(custom-enabled-themes nil)
+ '(custom-enabled-themes '(wombat))
  '(display-time-mode t)
  '(org-export-backends '(ascii html icalendar latex md odt))
  '(package-selected-packages
@@ -85,13 +103,20 @@
  ;; If there is more than one, they won't work right.
  '(table-cell ((t (:background "gray75" :foreground "dark blue" :inverse-video nil)))))
 
+;; Need to run this after custom themes load as they overwrite this:
+
+(set-face-attribute 'fringe nil :background nil)   ;; Make background of fringes transparent
+(set-face-background 'mode-line "purple1")         ;; Changes color of active buffer's mode-line (to change color of inactive buffer mode-line-inactive
+
+
+
 ;;; 4.0 Evil Mode Settings
 
 ;; Evil Mode
 
 ;; Download & Enable Evil
 
-(unless (package-installed-p 'evil)(package-install 'evil))
+(unless (package-installed-p 'evil) (package-install 'evil))
 (require 'evil)
 (evil-mode 1)
 
@@ -120,7 +145,7 @@
 
 ;; Some nicer cursors (?)
 
-(setq evil-emacs-state-cursor '((bar . 1) "black") evil-normal-state-cursor '(box "black"))
+(setq evil-emacs-state-cursor '((bar . 1) "white") evil-normal-state-cursor '(box "orange1"))
 
 ;; Not Used -> Disabling Evil Mode for Lisp Modes
 
@@ -156,10 +181,66 @@
 (global-set-key (kbd "C-c s") #'(lambda () (interactive) (switch-to-buffer "*slime-repl sbcl*")))
 (global-set-key (kbd "C-c a") '(lambda () (interactive)  (find-file "/Users/ashokkhanna/math/macrology/main.lisp")))
 
+;; Some Evil Mode Rebindings for Paredit
+
+;; (defmacro evil-paredit-equiv-append (function)
+;;   `(progn
+;;      (lambda ()
+;;        (interactive)
+;;        (evil-append 1)
+;;        (,function)
+;;        (evil-normal-state))))
+
+;; (defmacro evil-paredit-equiv-insert (function)
+;;   `(progn
+;;      (lambda ()
+;;        (interactive)
+;;        (evil-insert 1)
+;;        (,function)
+;;        (evil-normal-state))))
+
+;; (defun evil-lisp-normal-state-map ()
+;;   (define-key evil-normal-state-local-map (kbd "gh") (evil-paredit-equiv-append paredit-forward))      ;; C-M-f    paredit-forward
+;;      (define-key evil-normal-state-local-map (kbd "gj") (evil-paredit-equiv-insert paredit-backward)) ;; C-M-b    paredit-backward
+;;      (define-key evil-normal-state-local-map (kbd "gd") 'paredit-forward-down)                  ;; C-M-d    paredit-forward-down
+;;      (define-key evil-normal-state-local-map (kbd "gu") 'paredit-backward-up)                   ;; C-M-u    paredit-backward-up
+;;      (define-key evil-normal-state-local-map (kbd "gn") 'paredit-forward-up)                    ;; C-M-n    paredit-forward-up
+;;      (define-key evil-normal-state-local-map (kbd "gp") 'paredit-backward-down)                 ;; C-M-p    paredit-backward-down     
+;;      (define-key evil-normal-state-local-map (kbd "gr") 'paredit-raise-sexp)                    ;; M-r      paredit-raise-sexp
+;;      (define-key evil-normal-state-local-map (kbd "gi") 'paredit-splice-sexp)                   ;; M-s      paredit-splice-sexp
+;;      (define-key evil-normal-state-local-map (kbd "g9") 'paredit-backward-slurp-sexp)           ;; C-(      paredit-backward-slurp-sexp    
+;;      (define-key evil-normal-state-local-map (kbd "g0") 'paredit-forward-slurp-sexp)            ;; C-)      paredit-forward-slurp-sexp
+;;      (define-key evil-normal-state-local-map (kbd "g[") 'paredit-backward-barf-sexp)            ;; C-{      paredit-backward-barf-sexp
+;;      (define-key evil-normal-state-local-map (kbd "g]") 'paredit-forward-barf-sexp)             ;; C-}      paredit-forward-barf-sexp
+;;      (define-key evil-normal-state-local-map (kbd "ga") 'beginning-of-defun)                    ;; C-M-a    beginning-of-defun
+;;      (define-key evil-normal-state-local-map (kbd "gs") 'mark-sexp))                            ;; C-M-SPC  mark-sexp
+
+
+;; (add-hook 'emacs-lisp-mode-hook 'evil-lisp-normal-state-map)
+;; (add-hook 'lisp-mode-hook 'evil-lisp-normal-state-map)
+;; (add-hook 'lisp-interaction-mode-hook 'evil-lisp-normal-state-map)
+;; (add-hook 'scheme-mode-hook 'evil-lisp-norqmal-state-map)
+;; (add-hook 'slime-repl-mode-hook 'evil-lisp-normal-state-map)
+
+;; Available VIM keybindings
+;; Courtesy: https://gist.github.com/romainl/1f93db9dc976ba851bbb
+
+;; cd cm co cp cq cr cs cu cv cx cy cz
+;; dc dm dq dr ds du dv dx dy dz
+;; gb gc gl gs gy
+;; vc vd vm vo vp vq vr vs vu vv vx vy vz
+;; yc yd ym yo yp yq yr ys yu yv yx yz
+;; zq
+
+
 ;; Enable Evil Paredit (Ensure Evil & Paredit Modes coexist nicely with each other)
 
 (load "/Users/ashokkhanna/.emacs.d/evil-paredit.el")
 (add-hook 'emacs-lisp-mode-hook 'evil-paredit-mode)
+(add-hook 'lisp-mode-hook 'evil-paredit-mode)
+(add-hook 'lisp-interaction-mode-hook 'evil-paredit-mode)
+(add-hook 'scheme-mode-hook 'evil-paredit-mode)
+(add-hook 'slime-repl-mode-hook 'evil-paredit-mode)
 
 ;; Load Autologger (Elisp)
 
@@ -178,6 +259,17 @@
 
 (require 'xscheme)
 (setq scheme-program-name "/usr/local/Cellar/mit-scheme/11.2/bin/mit-scheme -library /usr/local/Cellar/mit-scheme/11.2/lib/mit-scheme-x86-64-11.2")
+
+;; Eval last Slime REPL command again
+
+(global-set-key (kbd "C-c p") (lambda ()
+				(interactive)
+				(let ((command (format "%s"
+						       (with-current-buffer "*slime-repl sbcl*"
+							 (car slime-repl-input-history)))))
+				  (slime-interactive-eval command))))
+
+
 
 ;;; 6.0 Org Mode Settings
 
@@ -400,17 +492,41 @@
 (global-set-key (kbd "C-c e") '(lambda () (interactive) (start-erc)))
 
 
+;; 9.0 Experimenting with Evil States
+
+;; EVIL / Paredit Bindings
+
+(evil-define-state paredit
+  "Paredit state."
+  :tag " <P> "
+  :enable (normal))
 
 
+;; Escape & Lisp States
+(define-key evil-paredit-state-map [escape] (lambda () (interactive) (evil-normal-state)))
+(define-key evil-paredit-state-map (kbd "SPC") (lambda () (interactive) (evil-normal-state)))
+(define-key evil-normal-state-map (kbd "SPC") (lambda () (interactive) (evil-paredit-state)))
+(define-key evil-paredit-state-map "i" (lambda () (interactive) (evil-insert-state)))
 
+;; Normal Keys - Not needed as taking from normal mode above via enable
+;; (define-key evil-paredit-state-map "h" 'evil-backward-char)
+;; (define-key evil-paredit-state-map "j" 'evil-next-visual-line)
+;; (define-key evil-paredit-state-map "k" 'evil-previous-visual-line)
+;; (define-key evil-paredit-state-map "l" 'evil-forward-char)
 
+;; Lisp Keys
 
-
-
-
-
-
-
-
-
-
+(define-key evil-paredit-state-map "w" 'paredit-forward)                       ;; C-M-f    paredit-forward
+(define-key evil-paredit-state-map "b" 'paredit-backward)                      ;; C-M-b    paredit-backward
+(define-key evil-paredit-state-map "d" 'paredit-forward-down)                  ;; C-M-d    paredit-forward-down
+(define-key evil-paredit-state-map "f" 'paredit-backward-up)                   ;; C-M-u    paredit-backward-up
+(define-key evil-paredit-state-map "n" 'paredit-forward-up)                    ;; C-M-n    paredit-forward-up
+(define-key evil-paredit-state-map "t" 'paredit-backward-down)                 ;; C-M-p    paredit-backward-down     
+(define-key evil-paredit-state-map "r" 'paredit-raise-sexp)                    ;; M-r      paredit-raise-sexp
+(define-key evil-paredit-state-map "t" 'paredit-splice-sexp)                   ;; M-s      paredit-splice-sexp
+(define-key evil-paredit-state-map "(" 'paredit-backward-slurp-sexp)           ;; C-(      paredit-backward-slurp-sexp    
+(define-key evil-paredit-state-map ")" 'paredit-forward-slurp-sexp)            ;; C-)      paredit-forward-slurp-sexp
+(define-key evil-paredit-state-map "{" 'paredit-backward-barf-sexp)            ;; C-{      paredit-backward-barf-sexp
+(define-key evil-paredit-state-map "}" 'paredit-forward-barf-sexp)             ;; C-}      paredit-forward-barf-sexp
+(define-key evil-paredit-state-map "a" 'beginning-of-defun)                    ;; C-M-a    beginning-of-defun
+(define-key evil-paredit-state-map "s" 'mark-sexp)                             ;; C-M-SPC  mark-sexp
