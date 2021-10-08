@@ -37,9 +37,16 @@
 (global-set-key (kbd "C-x C-u") 'undo)
 (global-set-key (kbd "M-o") 'other-window)
 
+;; Slightly controversial
+
+(global-set-key (kbd "C-h") 'delete-backward-char)
+(global-set-key (kbd "C-?") 'help-command)
+
 ;; Make C-x C-b take focus when run
 
 (global-set-key [remap list-buffers] #'buffer-menu-other-window)
+
+(setf help-window-select t)
 
 ;; Dired Mode & Backup Settings: See also https://emacs.stackexchange.com/questions/15009/delete-files-to-trash-on-os-x
 
@@ -139,9 +146,29 @@
     (define-key (eval map) "\C-f" nil)
     (define-key (eval map) "\C-b" nil)))
 
+
+;; Set q to close VIM
+
+(define-key evil-normal-state-map (kbd "q") 'kill-buffer)
+
+;; Better :q treatment (https://www.reddit.com/r/spacemacs/comments/76qel1/change_evil_mode_q_binding/)
+
+;; :q should kill the current buffer rather than quitting emacs entirely
+
+(evil-ex-define-cmd "q" 'kill-this-buffer)
+
+;; Need to type out :quit to close emacs
+
+(evil-ex-define-cmd "quit" 'evil-quit)
+
 ;; Disabling Evil for EWW (to allow us to quit with q)
 
 (add-to-list 'evil-emacs-state-modes 'eww-mode)
+
+
+
+
+
 
 ;; Some nicer cursors (?)
 
@@ -182,6 +209,8 @@
 (global-set-key (kbd "C-c a") '(lambda () (interactive)  (find-file "/Users/ashokkhanna/math/macrology/main.lisp")))
 
 ;; Some Evil Mode Rebindings for Paredit
+
+(load "/Users/ashokkhanna/parevil/parevil.el")
 
 ;; (defmacro evil-paredit-equiv-append (function)
 ;;   `(progn
@@ -232,15 +261,6 @@
 ;; yc yd ym yo yp yq yr ys yu yv yx yz
 ;; zq
 
-
-;; Enable Evil Paredit (Ensure Evil & Paredit Modes coexist nicely with each other)
-
-(load "/Users/ashokkhanna/.emacs.d/evil-paredit.el")
-(add-hook 'emacs-lisp-mode-hook 'evil-paredit-mode)
-(add-hook 'lisp-mode-hook 'evil-paredit-mode)
-(add-hook 'lisp-interaction-mode-hook 'evil-paredit-mode)
-(add-hook 'scheme-mode-hook 'evil-paredit-mode)
-(add-hook 'slime-repl-mode-hook 'evil-paredit-mode)
 
 ;; Load Autologger (Elisp)
 
@@ -492,41 +512,42 @@
 (global-set-key (kbd "C-c e") '(lambda () (interactive) (start-erc)))
 
 
-;; 9.0 Experimenting with Evil States
+;; 9.0 Some ParEdit Adjustments
 
-;; EVIL / Paredit Bindings
+;; Source: https://github.com/ashok-khanna/emacsd/blob/master/portacle-paredit.el
 
-(evil-define-state paredit
-  "Paredit state."
-  :tag " <P> "
-  :enable (normal))
+;; Fix the spacing for macro characters such as #p, etc.
+(defvar known-macro-characters (make-hash-table))
 
+(defun determine-cl-macro-character (macro-char)
+  (when (slime-connected-p)
+    (lexical-let ((macro-char macro-char))
+      (slime-eval-async
+       `(cl:ignore-errors
+         (cl:not (cl:null (cl:get-macro-character
+                           (cl:code-char ,macro-char)))))
+       (lambda (result)
+         (puthash macro-char result known-macro-characters))))))
 
-;; Escape & Lisp States
-(define-key evil-paredit-state-map [escape] (lambda () (interactive) (evil-normal-state)))
-(define-key evil-paredit-state-map (kbd "SPC") (lambda () (interactive) (evil-normal-state)))
-(define-key evil-normal-state-map (kbd "SPC") (lambda () (interactive) (evil-paredit-state)))
-(define-key evil-paredit-state-map "i" (lambda () (interactive) (evil-insert-state)))
+(defun cl-macro-character-p (macro-char)
+  (pcase (gethash macro-char known-macro-characters :not-found)
+         (`t t)
+         (`nil nil)
+         (:not-found
+          (determine-cl-macro-character macro-char)
+          (or ;; Don't know the result (yet), determine statically.
+              (cl-find macro-char '(?# ?,))))))
 
-;; Normal Keys - Not needed as taking from normal mode above via enable
-;; (define-key evil-paredit-state-map "h" 'evil-backward-char)
-;; (define-key evil-paredit-state-map "j" 'evil-next-visual-line)
-;; (define-key evil-paredit-state-map "k" 'evil-previous-visual-line)
-;; (define-key evil-paredit-state-map "l" 'evil-forward-char)
+(defun paredit-detect-cl-macro-character (endp delimiter)
+  (when (cl-find major-mode '(slime-repl-mode lisp-mode))
+    (if (not endp)
+        (save-excursion
+         (let ((1-back (char-before (point)))
+               (2-back (char-before (- (point) 1))))
+           (null (or (cl-macro-character-p (char-before (point)))
+                     (cl-macro-character-p (char-before (1- (point))))))))
+        t)))
 
-;; Lisp Keys
-
-(define-key evil-paredit-state-map "w" 'paredit-forward)                       ;; C-M-f    paredit-forward
-(define-key evil-paredit-state-map "b" 'paredit-backward)                      ;; C-M-b    paredit-backward
-(define-key evil-paredit-state-map "d" 'paredit-forward-down)                  ;; C-M-d    paredit-forward-down
-(define-key evil-paredit-state-map "f" 'paredit-backward-up)                   ;; C-M-u    paredit-backward-up
-(define-key evil-paredit-state-map "n" 'paredit-forward-up)                    ;; C-M-n    paredit-forward-up
-(define-key evil-paredit-state-map "t" 'paredit-backward-down)                 ;; C-M-p    paredit-backward-down     
-(define-key evil-paredit-state-map "r" 'paredit-raise-sexp)                    ;; M-r      paredit-raise-sexp
-(define-key evil-paredit-state-map "t" 'paredit-splice-sexp)                   ;; M-s      paredit-splice-sexp
-(define-key evil-paredit-state-map "(" 'paredit-backward-slurp-sexp)           ;; C-(      paredit-backward-slurp-sexp    
-(define-key evil-paredit-state-map ")" 'paredit-forward-slurp-sexp)            ;; C-)      paredit-forward-slurp-sexp
-(define-key evil-paredit-state-map "{" 'paredit-backward-barf-sexp)            ;; C-{      paredit-backward-barf-sexp
-(define-key evil-paredit-state-map "}" 'paredit-forward-barf-sexp)             ;; C-}      paredit-forward-barf-sexp
-(define-key evil-paredit-state-map "a" 'beginning-of-defun)                    ;; C-M-a    beginning-of-defun
-(define-key evil-paredit-state-map "s" 'mark-sexp)                             ;; C-M-SPC  mark-sexp
+(with-eval-after-load 'paredit
+  (add-to-list 'paredit-space-for-delimiter-predicates
+               'paredit-detect-cl-macro-character))
